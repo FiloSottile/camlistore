@@ -27,6 +27,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path"
@@ -48,6 +49,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
@@ -261,8 +263,17 @@ func (s *Storage) Fetch(br blob.Ref) (rc io.ReadCloser, size uint32, err error) 
 			return
 		}
 	}
-	// TODO(mpl): use context from caller, once one is available (issue 733)
-	r, err := s.client.Bucket(s.bucket).Object(s.dirPrefix + br.String()).NewReader(context.TODO())
+	var r *storage.Reader
+	for i := 0; i < 5; i++ {
+		// TODO(mpl): use context from caller, once one is available (issue 733)
+		r, err = s.client.Bucket(s.bucket).Object(s.dirPrefix + br.String()).NewReader(context.TODO())
+		if err, ok := err.(*googleapi.Error); ok && err.Code == 429 {
+			// Nearline read ratelimit (MB/s), sleep for 0-1000ms, then retry.
+			time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond)
+			continue
+		}
+		break
+	}
 	if err == storage.ErrObjectNotExist {
 		return nil, 0, os.ErrNotExist
 	}
