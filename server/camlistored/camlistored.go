@@ -47,6 +47,7 @@ import (
 	"camlistore.org/pkg/osutil/gce" // for init side-effects + LogWriter
 
 	// Storage options:
+	_ "camlistore.org/pkg/blobserver/b2"
 	"camlistore.org/pkg/blobserver/blobpacked"
 	_ "camlistore.org/pkg/blobserver/cond"
 	_ "camlistore.org/pkg/blobserver/diskpacked"
